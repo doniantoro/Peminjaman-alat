@@ -15,7 +15,6 @@ $(document).on('click', '.pilih2', function (a) {
     document.getElementById("barang_id2").value = $(this).attr('data-barang_id2');
     $('#myModal3').modal('hide');
 });
-
 $(function () {
     $("#lookup, #lookup2, #lookup3").dataTable();
 });
@@ -29,7 +28,6 @@ function readURL() {
         reader.readAsDataURL(input.files[0]);
     }
 }
-
 $(function () {
     $(".uploads").change(readURL)
     $("#f").submit(function(){
@@ -38,7 +36,6 @@ $(function () {
         return false
     })
 })
-
 var check = function() {
   if (document.getElementById('password').value ==
     document.getElementById('confirm_password').value) {
@@ -51,7 +48,6 @@ var check = function() {
     document.getElementById('message').innerHTML = 'not matching';
   }
 }
-
 $(".readonly").on('keydown paste', function(e){
     e.preventDefault();
 });

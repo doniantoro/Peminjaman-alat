@@ -11,6 +11,10 @@ class Transaksi_barang extends Model
 
     public function transaksi()
     {
-        return $this->belongsTo(Transaksi_barang::class);
+        return $this->belongsTo('App\Transaksi');
+    }
+    public function barang()
+    {
+        return $this->hasOne('App\Barang','id','barang_id');
     }
 }

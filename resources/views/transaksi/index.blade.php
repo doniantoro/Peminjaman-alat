@@ -95,9 +95,10 @@
                 </td>
                 <td>
                   <ul>
-                  @foreach($data->transaksi_barang as $value)
-                  <li>{{getBarang($value->barang_id)}} : Jumlah {{$value->jumlah_barang_pinjam}} || Sisa {{getSisaBarang($value->barang_id)}}</li>
-                  @endforeach
+								@foreach($data->transaksi_barang as $t)
+                  <li>{{$t['barang']->nama_barang}} : Jumlah {{$t->jumlah_barang_pinjam}} || Sisa {{$t['barang']->sisa_barang}}</li>
+
+        				@endforeach
                   </ul>
                 </td>
                 <td>

@@ -33,7 +33,12 @@ class TransaksiController extends Controller
         if (Auth::user()->level == 'User') {
             $datas = Transaksi::where('nama', Auth::user()->nama)->get();
         } else {
-            $datas = Transaksi::with('transaksi_barang')->get();
+            $datas = transaksi::with('transaksi_barang.barang','transaksi_barang')->get();
+                    // ->join('transaksi_barang','barang.id','=','transaksi_barang.barang_id')
+                    // ->join('transaksi','transaksi_barang.transaksi_id','=','transaksi.id')
+                    // ->get();
+                    // return json_encode($datas->bara);
+                   
         }
         return view('transaksi.index', compact('datas'));
     }
@@ -81,21 +86,86 @@ class TransaksiController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
+
+    // public function store(Request $request)
+    // {
+    //     if ($request->file('file_surat') == '') {
+    //         $file_surat = null;
+    //     } else {
+    //         $file = $request->file('file_surat');
+    //         $dt = Carbon::now();
+    //         $acak = $file->getClientOriginalExtension();
+    //         $fileName = rand(11111, 99999) . '-' . $dt->format('Y-m-d-H-i-s') . '.' . $acak;
+    //         $request->file('file_surat')->move("images/transaksi", $fileName);
+    //         $file_surat = $fileName;
+    //     }
+    //     $barang = Barang::get();
+    //     $data = $request->all();
+    //     $datas = $request->all();
+        
+    //     $data['status'] = 'pinjam';
+    //     $id = Transaksi::create($data)->id;
+    //     $count = count($_POST['barang_id']);
+    //     $data = array();
+    //     $param="";
+    //     $int=0;
+    //     for ($i = 0; $i < $count; $i++) {
+    //         $same=true;
+    //         // fetch data barang
+    //          foreach($barang as $barangs)
+	// 		{
+    //         if (($barangs->jumlah_barang < $request->jumlah_barang_pinjam)&& ($request->barang_id == $barangs->id))
+    //         {
+    //             $same=false; 
+    //             $failed[$int]=$datas['jumlah_barang_pinjam'][$i];	//simpan barang yang dipinjam melebihi stok
+    //             $param=1;   // parameter jika ada barang yang melebihi stok
+    //             $int++;
+    //         }
+    //     }
+    //     if ($same==true){ // if ada barang yang sama
+    //         $param=2;
+    //             $data[] = array(
+    //                 'transaksi_id' => $id,
+    //                 'barang_id' => $request->input('barang_id.' . $i),
+    //                 'jumlah_barang_pinjam' => $request->input('jumlah_barang_pinjam.' . $i),  
+    //                 // 'keterangan_barang' => $request->input('keterangan_barang.' .$i),
+    //             );
+    //         }
+
+    //     }
+    //     Transaksi_barang::insert($data);
+
+    //     //cetak alert jika ada yang sama 
+    //     if($param == 1){
+	// 		session()->flash('status', 'Maaf jumlah '.$failed[0] .' Tidak dapat di proses,karena sisa barang lebih sedikit dari jumlah barang');		// alihkan halaman ke halaman input
+	// 	 }
+    //      else{
+    //         session()->flash('status', 'Data telah ditambahkan!');
+    
+    //      }
+    //     return redirect()->route('transaksi.index');
+    // }
+
     public function store(Request $request)
     {
         if ($request->file('file_surat') == '') {
             $file_surat = null;
         } else {
             $file = $request->file('file_surat');
+    
+            $fileName = $file->getClientOriginalExtension();
             $dt = Carbon::now();
-            $acak = $file->getClientOriginalExtension();
-            $fileName = rand(11111, 99999) . '-' . $dt->format('Y-m-d-H-i-s') . '.' . $acak;
-            $request->file('file_surat')->move("images/transaksi", $fileName);
-            $file_surat = $fileName;
+            $fileName = rand(11111, 99999) . '-' . $dt->format('Y-m-d-H-i-s') . '.' . $fileName;
+
+            $file->move("images/transaksi", $fileName);
         }
+
+
         $barang = Barang::get();
         $data = $request->all();
         $datas = $request->all();
+        
+        $data['file_surat'] = $fileName;
         
         $data['status'] = 'pinjam';
         $id = Transaksi::create($data)->id;
@@ -105,6 +175,16 @@ class TransaksiController extends Controller
         $int=0;
         for ($i = 0; $i < $count; $i++) {
             $same=true;
+
+
+            $sisa_barang = Barang::where('id', '=' ,$datas['barang_id'][$i] )->get();
+            foreach($sisa_barang as $barangs){
+             $sisa_barang=$barangs->sisa_barang;
+     
+           
+            }
+     
+
             // fetch data barang
              foreach($barang as $barangs)
 			{
@@ -124,6 +204,11 @@ class TransaksiController extends Controller
                     'jumlah_barang_pinjam' => $request->input('jumlah_barang_pinjam.' . $i),  
                     // 'keterangan_barang' => $request->input('keterangan_barang.' .$i),
                 );
+            
+                DB::table('barang')->where('id',$datas['barang_id'][$i])->update([
+                    'sisa_barang' => $sisa_barang - $datas['jumlah_barang_pinjam'][$i]  
+                    ]);
+        
             }
 
         }
@@ -137,8 +222,12 @@ class TransaksiController extends Controller
             session()->flash('status', 'Data telah ditambahkan!');
     
          }
-        return redirect()->route('transaksi.index');
+
+
+    
+         return redirect()->route('transaksi.index');
     }
+
 
     /**
      * Display the specified resource.
@@ -209,41 +298,96 @@ class TransaksiController extends Controller
 
     public function update(Request $request, $id)
     {
-        $transaksi = Transaksi::findOrFail($id);
-        if ($request->file('file_surat') == '') {
-            $file_surat = $transaksi->file_surat;
-        } else {
-            $file = $request->file('file_surat');
-            $dt = Carbon::now();
-            $acak = $file->getClientOriginalExtension();
-            $fileName = rand(11111, 99999) . '-' . $dt->format('Y-m-d-H-i-s') . '.' . $acak;
-            $request->file('file_surat')->move("images/transaksi", $fileName);
-            $file_surat = $fileName;
-        }
-        $count = count($_POST['barang_id']);
-        $data = array();
-        for ($i = 0; $i < $count; $i++) {
-            $data = array(
-                'barang_id' => $request->input('barang_id.' . $i),
-                'jumlah_barang_pinjam' => $request->input('jumlah_barang_pinjam.' . $i),
-            );
-            Transaksi_barang::where('id', $request->input('id_transaksi_barang.' . $i))->update($data);
-        }
-        $updateTransaksi = DB::table('transaksi')
-            ->where('id', '=', $request->input('id'))
-            ->update(array(
-                'file_surat' => ($file_surat),
-                'tgl_pinjam' => $request->input('tgl_pinjam'),
-                'tgl_kembali' => $request->input('tgl_kembali'),
-                'nama_peminjam' => $request->input('nama_peminjam'),
-                'nim' => $request->input('nim'),
-                'no_telp' => $request->input('no_telp'),
-                'nama_organisasi' => $request->input('nama_organisasi'),
-                'ket' => $request->input('ket'),
-                'status' => $request->input('status'),
-            ));
+    //     $transaksi = Transaksi::findOrFail($id);
+    //     if ($request->file('file_surat') == '') {
+    //         $file_surat = $transaksi->file_surat;
+    //     } else {
+    //         $file = $request->file('file_surat');
+    //         $dt = Carbon::now();
+    //         $acak = $file->getClientOriginalExtension();
+    //         $fileName = rand(11111, 99999) . '-' . $dt->format('Y-m-d-H-i-s') . '.' . $acak;
+    //         $request->file('file_surat')->move("images/transaksi", $fileName);
+    //         $file_surat = $fileName;
+    //     }
+    // //    $count = count($_POST['barang_id']);
+    //     $data = array();
+    //   //  for ($i = 0; $i < $count; $i++) {
+    //         $data = array(
+    //             'barang_id' => $request->barang_id,
+    //             'jumlah_barang_pinjam' => $request->jumlah_barang_pinjam,
+    //         );
+    //         Transaksi_barang::where('id', $request->id_transaksi_barang)->update($data);
+    //    // }
+    //     $updateTransaksi = DB::table('transaksi')
+    //         ->where('id', '=', $request->input('id'))
+    //         ->update(array(
+    //             'file_surat' => ($file_surat),
+    //             'tgl_pinjam' => $request->input('tgl_pinjam'),
+    //             'tgl_kembali' => $request->input('tgl_kembali'),
+    //             'nama_peminjam' => $request->input('nama_peminjam'),
+    //             'nim' => $request->input('nim'),
+    //             'no_telp' => $request->input('no_telp'),
+    //             'nama_organisasi' => $request->input('nama_organisasi'),
+    //             'ket' => $request->input('ket'),
+    //             'status' => $request->input('status'),
+    //         ));
 
 
+    //         $barang = Barang::where('id', '=' ,$request->barang_id)->get();
+    //         foreach($barang as $barangs){
+    //          $barang=$barangs->sisa_barang;
+     
+           
+    //         }
+    //          DB::table('barang')->where('id',$request->barang_id)->update([
+    //              'sisa_barang' => $barang + $request->jumlah_barang_pinjam  
+    //              ]);
+    $transaksi = Transaksi::findOrFail($id);
+    if ($request->file('file_surat') == '') {
+        $file_surat = $transaksi->file_surat;
+    } else {
+        $file = $request->file('file_surat');
+        $dt = Carbon::now();
+        $acak = $file->getClientOriginalExtension();
+        $fileName = rand(11111, 99999) . '-' . $dt->format('Y-m-d-H-i-s') . '.' . $acak;
+        $request->file('file_surat')->move("images/transaksi", $fileName);
+        $file_surat = $fileName;
+    }
+    $count = count($_POST['barang_id']);
+    $data = array();
+    
+    $datas = $request->all();
+    for ($i = 0; $i < $count; $i++) {
+        $data = array(
+            'barang_id' => $request->input('barang_id.' . $i),
+            'jumlah_barang_pinjam' => $request->input('jumlah_barang_pinjam.' . $i),
+        );
+        Transaksi_barang::where('id', $request->input('id_transaksi_barang.' . $i))->update($data);
+    
+        $sisa_barang = Barang::where('id', '=' ,$datas['barang_id'][$i] )->get();
+        foreach($sisa_barang as $barangs){
+         $sisa_barang=$barangs->sisa_barang;
+        }
+        DB::table('barang')->where('id',$datas['barang_id'][$i])->update([
+            'sisa_barang' => $sisa_barang + $datas['jumlah_barang_pinjam'][$i]  
+            ]);
+
+ 
+    }
+    $updateTransaksi = DB::table('transaksi')
+        ->where('id', '=', $request->input('id'))
+        ->update(array(
+            'file_surat' => ($file_surat),
+            'tgl_pinjam' => $request->input('tgl_pinjam'),
+            'tgl_kembali' => $request->input('tgl_kembali'),
+            'nama_peminjam' => $request->input('nama_peminjam'),
+            'nim' => $request->input('nim'),
+            'no_telp' => $request->input('no_telp'),
+            'nama_organisasi' => $request->input('nama_organisasi'),
+            'ket' => $request->input('ket'),
+            'status' => $request->input('status'),
+        ));
+  
         alert()->success('Berhasil.', 'Data barang telah berubah!');
         return redirect()->route('transaksi.index');
     }

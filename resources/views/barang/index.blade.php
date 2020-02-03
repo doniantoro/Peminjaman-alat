@@ -67,7 +67,7 @@
                           </a>
                           </td>
                           <td>
-                          {{ $value->jumlah_barang }} / {{getSisaBarang($value->id)}}						  
+                          {{ $value->jumlah_barang }} / {{ $value->sisa_barang }}						  
                           </td>
                           <td>
 						              @if(Auth::User()->level == 'admin')

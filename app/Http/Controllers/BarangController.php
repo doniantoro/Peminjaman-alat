@@ -28,9 +28,13 @@ class BarangController extends Controller
 
     public function index()
     {
-        $barang = Barang::withCount(['transaksi_barang as sisa_barang' => function ($query) {
-            $query->select(DB::raw('jumlah_barang - IFNULL(sum(jumlah_barang_pinjam),0)'));
-        }])->get();
+        // $barang = Barang::withCount(['transaksi_barang as sisa_barang' => function ($query) {
+        //     $query->select(DB::raw('jumlah_barang - IFNULL(sum(jumlah_barang_pinjam),0)'));
+        // }])->get();
+        $barang = DB::table('barang')
+    //    ->join('transaksi_barang','barang.id','=','transaksi_barang.barang_id')
+   //     ->join('transaksi','transaksi_barang.transaksi_id','=','transaksi.id')
+        ->get();
         return view('barang.index', compact('barang'));
     }
 
